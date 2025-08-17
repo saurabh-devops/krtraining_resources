@@ -1,0 +1,10 @@
+# ansible-playbook playbook.yml --ask-sudo-pass
+
+
+--- 
+- name: testing
+  hosts: localhost
+  tasks: 
+   - name: printing uptime
+     shell: uptime
+   

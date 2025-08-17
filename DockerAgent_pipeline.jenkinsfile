@@ -1,0 +1,14 @@
+pipeline {
+     agent { dockerfile true }
+    // agent { docker { image 'alpine:latest' } }
+ stages {
+   stage('On docker agent') {
+     steps {
+       sh '''#!/bin/sh
+             pwd
+             hostname
+       '''
+      }
+   }
+  }
+}

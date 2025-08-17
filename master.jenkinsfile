@@ -1,0 +1,51 @@
+pipeline {
+    agent any  // Runs on any available agent
+
+    environment {
+        // Environment variables
+        VAR_NAME = 'env_var_value'
+    }
+    
+    parameters {
+      choice choices: ['choice1', 'choice2'], name: 'parameter_1'
+    }
+    
+    tools {
+        // Tools required (e.g., Maven, JDK)
+        maven 'mvn3'
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                // Commands to build the project
+                sh 'echo build step'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // Running tests
+                sh 'echo testing'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                // Deploying the application
+                sh '''
+                echo "deploy on $VAR_NAME with parameter ${parameter_1}"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
