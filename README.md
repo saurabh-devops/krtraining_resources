@@ -1,0 +1,1 @@
+# krtraining_resources
