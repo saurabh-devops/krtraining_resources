@@ -1,6 +1,6 @@
 pipeline {
-     agent { dockerfile true }
-    // agent { docker { image 'alpine:latest' } }
+     // agent { dockerfile true }
+     agent { docker { image 'alpine:latest' } }
  stages {
    stage('On docker agent') {
      steps {
