@@ -1,0 +1,84 @@
+pipeline {
+    
+    
+    agent {
+     label 'built-in'
+   }
+ 
+ stages {
+  
+  stage('checkout') {
+    steps {
+     git branch: 'maven', credentialsId: 'github_app', url: 'https://github.com/saurabh-devops/krtraining_maven.git'
+    }
+  }
+
+  stage('build') {
+    steps {
+     sh '''
+     pwd
+     ls -lrt
+     cd my-webapp
+     mvn --version
+     mvn clean package
+     '''
+    }
+  }
+  
+  stage('upload in nexus') {
+    steps {
+     sh '''
+     pwd
+     ls -lrt
+     cd my-webapp
+     mvn --version
+     mvn clean deploy
+     mvn clean
+     '''
+    }
+  }
+
+  stage('checkout ansible') {
+    agent {
+     label 'node1'
+    }
+    steps {
+     git branch: 'cicd_pipeline', credentialsId: 'github_app', url: 'https://github.com/saurabh-devops/krtraining_jenkins.git'
+    }
+  } 
+  
+  stage('ansible') {
+    
+    agent {
+     label 'node1'
+    }
+    steps {
+     sh '''
+     ansible-playbook playbook_tomcat.yml
+     '''
+    }
+  }
+
+  stage('CodeAnalysis') {
+   steps {
+    withSonarQubeEnv(credentialsId: 'sonar_local', installationName: 'sonarqube_desktop') {
+     sh '''
+     cd my-webapp
+     export JAVA_HOME=/home/saurabh/E_drive/krtraining/sonarqube/jdk-17.0.2/
+     mvn sonar:sonar -Dsonar.projectKey=cicd_pipeline -Dsonar.host.url=http://localhost:9000 -Dsonar.token=squ_c8a7ce6e59211d93aad36389e21b1152e3c79e3c
+     '''
+    }
+  }
+  }
+  stage("Quality Gate") {
+            steps {
+              timeout(time: 1, unit: 'HOURS') {
+                waitForQualityGate abortPipeline: true, credentialsId: 'sonar_local'
+              }
+            }
+          }
+
+ 
+     
+ }
+}
