@@ -1,0 +1,17 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('Deploy to Kubernetes') {
+      steps {
+        kubeconfig(caCertificate: '', credentialsId: 'minikube_config_cred', serverUrl: 'https://192.168.49.2:8443') {
+   sh '''
+   kubectl apply -f "$WORKSPACE/deployment.yaml"
+   kubectl get pods
+   kubectl delete -f "$WORKSPACE/deployment.yaml"
+   '''
+       }
+      }
+    }
+  }
+}
