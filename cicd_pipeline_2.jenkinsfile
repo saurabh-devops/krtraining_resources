@@ -1,0 +1,110 @@
+pipeline {
+    
+    
+    agent {
+     label 'built-in'
+   }
+   
+   tools {
+        // Tools required (e.g., Maven, JDK)
+        maven 'maven'
+    }
+   environment {
+        DOCKER_REGISTRY = "localhost:5000"    // Replace with your Nexus registry URL
+    }
+ 
+ stages {
+     
+ stage('checkout') {
+    steps {
+     git branch: 'demo', credentialsId: 'krtrainingAwsJenkins', url: 'https://github.com/saurabh-devops/krtraining_resources.git'
+    }
+  }
+  
+ stage('CodeAnalysis') {
+   steps {
+    withSonarQubeEnv(credentialsId: 'aws_sonarqube', installationName: 'aws_sonar') {
+     sh '''
+     cd hello-world
+     ls -lrt
+     mvn clean install
+     /var/jenkins_home/sonar-scanner-7.2.0.5079-linux-aarch64/bin/sonar-scanner -Dsonar.projectKey=cicd_pipeline -Dsonar.java.binaries=target/classes
+     '''
+    }
+  }
+  }
+  
+ stage('Quality Gate') {
+  steps {
+    timeout(time: 1, unit: 'HOURS') {
+      waitForQualityGate abortPipeline: true, credentialsId: 'aws_sonarqube'
+    }
+  }
+}
+ stage('docker_build') {
+    steps {
+     sh '''
+     cd $WORKSPACE/hello-world
+     docker build -t helloworld:$BUILD_NUMBER .
+     docker image ls
+     '''
+    }
+  }
+  
+    stage('docker_upload') {
+         steps {
+                    withCredentials([usernamePassword(credentialsId: 'nexusapi', 
+                                                       usernameVariable: 'DOCKER_USERNAME', 
+                                                       passwordVariable: 'DOCKER_PASSWORD')]) {
+                        // Running a shell command to log in to Docker
+                        sh '''
+                        docker tag helloworld:$BUILD_NUMBER ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} http://${DOCKER_REGISTRY}
+                        docker push ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        '''
+                    }
+                }
+            }
+            
+    stage('delete_local_image') {
+         steps {
+                        sh '''
+                        echo "deleting local image "
+                        docker image rm ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        docker image ls 
+                        '''
+                }
+            }
+  
+  
+    stage('nexus_download') {
+         steps {
+                    withCredentials([usernamePassword(credentialsId: 'nexusapi', 
+                                                       usernameVariable: 'DOCKER_USERNAME', 
+                                                       passwordVariable: 'DOCKER_PASSWORD')]) {
+                        // Running a shell command to log in to Docker
+                        sh '''
+                        #docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} http://${DOCKER_REGISTRY}
+                        docker pull ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        docker run -d --name helloworld -p 8083:8080 ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        docker ps
+                        sleep 10
+                        '''
+         }}}               
+                        
+                
+
+        stage('cleanup') {
+         steps {
+                        // Running a shell command to log in to Docker
+                        sh '''
+                        docker stop helloworld
+                        docker container rm helloworld
+                        docker image rm ${DOCKER_REGISTRY}/hello-world/helloworld:$BUILD_NUMBER
+                        docker image rm helloworld:$BUILD_NUMBER
+                        docker logout http://${DOCKER_REGISTRY}
+                        '''
+                }
+            }
+            }
+}
