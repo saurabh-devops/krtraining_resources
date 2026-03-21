@@ -19,3 +19,10 @@ spec:
         image: nginx:alpine  # Pre-built Nginx image from Docker Hub
         ports:
         - containerPort: 80
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            nginx &
+            sleep 120
+            echo "Shutting down after 2 minutes"
+            nginx -s quit
