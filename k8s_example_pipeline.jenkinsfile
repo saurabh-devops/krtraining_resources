@@ -8,8 +8,9 @@ pipeline {
             git branch: 'main', credentialsId: 'krtrainingJenkins', url: 'https://github.com/saurabh-devops/krtraining_resources.git'
    sh '''
    kubectl apply -f "$WORKSPACE/deployment.yaml"
-   sleep 40
+   sleep 10
    kubectl get pods
+   sleep 5
    kubectl delete -f "$WORKSPACE/deployment.yaml"
    '''
        }
